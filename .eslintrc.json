@@ -1,0 +1,13 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "standard",
+    "plugin:tailwindcss/recommended",
+    "prettier"
+  ],
+  "rules": {
+    "react/display-name": "off",
+    "tailwindcss/classnames-order": "warn",
+    "tailwindcss/no-custom-classname": "off"
+  }
+}

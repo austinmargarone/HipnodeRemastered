@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("../styles/divine.css");
+@import url("../styles/shadcn.css");
+@import url("../styles/theme.css");
+@import url("../styles/editor.css");
+
+/* Add styles for react-datepicker */
+
+@layer utilities {
+  .flex-center {
+    @apply flex justify-center items-center;
+  }
+
+  .flex-between {
+    @apply flex justify-between items-center;
+  }
+
+  .flex-start {
+    @apply flex justify-start items-center;
+  }
+  .h1-bold {
+    @apply text-[26px] leading-[38px] font-bold;
+  }
+  .h1-semibold {
+    @apply text-[26px] leading-[38px] font-semibold;
+  }
+  .h2-bold {
+    @apply text-[18px] leading-7 font-bold;
+  }
+  .h3-semibold {
+    @apply text-[18px] leading-[26px] font-semibold;
+  }
+  .h3-regular {
+    @apply text-[18px] leading-[26px] font-normal;
+  }
+  .display-bold {
+    @apply text-base font-bold;
+  }
+  .display-semibold {
+    @apply text-base font-semibold;
+  }
+  .display-regular {
+    @apply text-base font-normal;
+  }
+  .body-bold {
+    @apply text-sm leading-[22px] font-bold;
+  }
+  .body-semibold {
+    @apply text-sm leading-[22px] font-semibold;
+  }
+  .body-regular {
+    @apply text-sm leading-[22px] font-normal;
+  }
+  .caption-semibold {
+    @apply text-xs leading-[18px] font-semibold;
+  }
+  .caption-regular {
+    @apply text-xs leading-[18px] font-normal;
+  }
+  .text-sm-semibold {
+    @apply text-[10px] leading-4 font-semibold;
+  }
+  .text-sm-regular {
+    @apply text-[10px] leading-4 font-normal;
+  }
+  .text-xs-semibold {
+    @apply text-[9px] leading-[14px] font-semibold;
+  }
+  .text-xs-regular {
+    @apply text-[9px] leading-[14px] font-normal;
+  }
+  .page-formatting {
+    @apply mt-2.5 flex flex-col items-center justify-center gap-5 md:mt-5 md:flex-row md:items-start;
+  }
+}
