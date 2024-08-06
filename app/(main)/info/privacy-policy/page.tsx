@@ -4,7 +4,7 @@ import React from "react";
 const route = () => {
   return (
     <section>
-      <div className="xs:max-w-[350px] mx-auto my-[1.25rem] flex max-w-[300px] flex-col gap-[1.25rem] sm:max-w-[550px] md:max-w-[700px] lg:max-w-[1000px]">
+      <div className="xs:max-w-[350px] mx-auto my-5 flex max-w-[300px] flex-col gap-5 sm:max-w-[550px] md:max-w-[700px] lg:max-w-[1000px]">
         <div className="flex flex-col gap-[.625rem]">
           <h1 className="h1-semibold">Privacy Policy</h1>
           <p>Last updated: January 09, 2024</p>
@@ -127,11 +127,11 @@ const route = () => {
               <p>
                 <strong>Website</strong> refers to Hipnode, accessible from{" "}
                 <a
-                  href="hipnode-xk0v.onrender.com"
+                  href="https://righteous-ta-social.onrender.com"
                   rel="external nofollow noopener"
                   target="_blank"
                 >
-                  hipnode-xk0v.onrender.com
+                  https://righteous-ta-social.onrender.com
                 </a>
               </p>
             </li>
@@ -571,16 +571,16 @@ const route = () => {
             <li>
               By visiting this page on our website:{" "}
               <a
-                href="hipnode-xk0v.onrender.com"
+                href="https://righteous-ta-social.onrender.com"
                 rel="external nofollow noopener"
                 target="_blank"
               >
-                hipnode-xk0v.onrender.com
+                https://righteous-ta-social.onrender.com
               </a>
             </li>
           </ul>
         </div>
-        <div className="flex justify-center gap-[1.25rem] border-t-[1px]">
+        <div className="flex justify-center gap-5 border-t">
           <Link href="/info/terms-of-service">
             <p>Terms of Service</p>
           </Link>
