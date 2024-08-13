@@ -1,8 +1,5 @@
 import React from "react";
-
-import NextAuthProvider from "../providers/NextAuthProvider";
 import { getServerSession } from "next-auth";
-
 import type { Metadata } from "next";
 // eslint-disable-next-line camelcase
 import { Source_Sans_3 } from "next/font/google";
@@ -10,7 +7,8 @@ import "./globals.css";
 import { Providers } from "@/providers/ThemeProvider";
 import { cn } from "@/utils";
 import { Toaster } from "@/components/ui/toaster";
-
+import NextAuthProvider from "../providers/NextAuthProvider";
+import PageWrapper from "@/components/PageWrapper";
 const SourceSansPro = Source_Sans_3({ subsets: ["latin"] });
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -40,7 +38,9 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={cn(SourceSansPro.className, "bg-bkg")}>
         <NextAuthProvider session={session}>
-          <Providers>{children}</Providers>
+          <Providers>
+            <PageWrapper>{children}</PageWrapper>
+          </Providers>
         </NextAuthProvider>
         <Toaster />
       </body>

@@ -17,6 +17,7 @@ import { useOutsideClick } from "@/hooks/useOutsideClick";
 import { useSocketContext } from "@/providers/SocketProvider";
 import { createPortal } from "react-dom";
 import NavChatPopup from "./NavChatPopup";
+import { useAccount } from "wagmi";
 
 const Navbar = ({
   user,
@@ -51,6 +52,7 @@ const Navbar = ({
   const username = user?.username || "";
   const id = user?.id || "";
   const { isChatPopUpOpen } = useSocketContext();
+  const { isConnected: isWalletConnected, address } = useAccount();
 
   const handleKeyDown = (e: { key: string }) => {
     if (e.key === "Enter") {
@@ -136,14 +138,24 @@ const Navbar = ({
                 {notifExpanded && <Notification toggle={() => toggleNotif()} />}
               </div>
 
+              <div className="flex items-center">
+                {isWalletConnected ? (
+                  <Button className="items-center gap-2.5 bg-secondary6 p-2.5 dark:bg-dark4">
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
+                  </Button>
+                ) : (
+                  <w3m-button />
+                )}
+              </div>
+
               <section className="flex flex-row items-center md:gap-2.5">
                 <div className="flex flex-row md:gap-4">
                   <div
                     ref={menuRef}
-                    className="relative aspect-square h-[34px] w-[34px] items-center justify-center rounded-full border-4 border-yellow"
+                    className="relative aspect-square size-[34px] items-center justify-center rounded-full border-4 border-yellow"
                   >
                     <div
-                      className="relative h-full w-full rounded-full"
+                      className="relative size-full rounded-full"
                       onClick={() => toggleMenu()}
                     >
                       <Image
@@ -153,7 +165,7 @@ const Navbar = ({
                         className="rounded-full object-fill"
                       />
                       {isConnected && (
-                        <div className="absolute bottom-0 right-0 flex h-4 w-4 rounded-full border-2 border-white bg-green"></div>
+                        <div className="absolute bottom-0 right-0 flex size-4 rounded-full border-2 border-white bg-green"></div>
                       )}
                     </div>
                     {menuExpanded && <Popup username={username} id={id} />}
