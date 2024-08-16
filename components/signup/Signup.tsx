@@ -70,7 +70,8 @@ const SignUp: React.FC = () => {
         newFormData.append(key, value);
       });
 
-      const data = await newUser(newFormData);
+      const data: { status: string; message?: string } =
+        await newUser(newFormData);
 
       if (data.status === "success") {
         await signIn("credentials", {
@@ -103,7 +104,7 @@ const SignUp: React.FC = () => {
       <div>
         <Input
           name="username"
-          type="username"
+          type="text"
           divClassName="bg-background rounded-lg px-5 py-[13px] md:bg-background2 md:dark:bg-dark2 dark:bg-dark3"
           className="w-full bg-transparent md:text-secondary2 md:placeholder:text-secondary2 md:dark:text-background2 "
           value={formData.username}
