@@ -11,7 +11,7 @@ const signIn = () => {
         <LogInInfoSection />
       </section>
       {/* Login Section */}
-      <section className=" flex h-full flex-col bg-background2 px-6 py-20 dark:bg-dark2 md:w-1/2 md:bg-background md:py-0 md:dark:bg-dark3 ">
+      <section className="flex h-full flex-col items-center justify-center bg-background2 px-6 py-20 dark:bg-dark2 md:w-1/2 md:bg-background md:py-0 md:dark:bg-dark3 ">
         <SignIn />
       </section>
     </main>
