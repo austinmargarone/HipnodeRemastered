@@ -1,13 +1,11 @@
 import React from "react";
-
 import Navbar from "@/components/navbar/Navbar";
 import Footer from "@/components/navbar/Footer";
 import { getCurrentUser } from "@/utils/actions/user.action";
-import { SocketProvider } from "@/providers/SocketProvider";
-import { PodcastProvider } from "@/providers/PodcastProvider";
 
 export const dynamic = "force-dynamic";
-export default async function RootLayout({
+
+export default async function MainLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -26,15 +24,11 @@ export default async function RootLayout({
 
   return (
     <>
-      <SocketProvider>
-        <PodcastProvider>
-          <Navbar user={userData} />
-          {children}
-          <div className="sticky bottom-0 md:hidden">
-            <Footer />
-          </div>
-        </PodcastProvider>
-      </SocketProvider>
+      <Navbar user={userData} />
+      {children}
+      <div className="sticky bottom-0 md:hidden">
+        <Footer />
+      </div>
     </>
   );
 }
