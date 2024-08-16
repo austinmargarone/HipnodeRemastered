@@ -11,6 +11,7 @@ type Props = {
   type?: "text" | "password" | "email";
   onKeyDown?: any;
   register?: any;
+  required?: any;
 };
 
 export const Input = ({
@@ -25,6 +26,7 @@ export const Input = ({
   divClassName,
   onKeyDown,
   register,
+  required,
 }: Props) => {
   return (
     <div className={`${divClassName}`}>
