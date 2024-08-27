@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ImageFallback as Image } from "@/components/shared/ImageFallback";
 
+
 import FillIcon from "../icons/FillIcon";
 import { Input } from "../form/Input";
 import OutlineIcon from "../icons/OutlineIcon";
@@ -71,13 +72,17 @@ const Navbar = ({
     <article className="sticky top-0 z-10 flex h-[60px] justify-center bg-background px-[27px] py-3 shadow-lg dark:bg-dark3 md:h-[80px] md:px-[40px] md:py-[20px] lg:px-0">
       <div className="flex w-[335px] flex-row justify-between gap-2.5 md:w-[1130px] md:gap-0 lg:w-[1360px]">
         <section className="flex flex-row items-center justify-center gap-5 md:gap-2.5">
-          <div className="flex h-[30px] items-center justify-center gap-2.5 rounded-[6px] bg-secondary1 p-1 dark:bg-background">
-            <LogoIcon className="fill-background stroke-background dark:fill-dark2 dark:stroke-dark2" />
+          <div className="flex left-30 items-center h-full">
+            <Image
+              src="/nodelogoT.png" 
+              alt="Logo"
+              width={180} // Adjust the width as needed
+              height={70} // Adjust the height as needed
+              priority
+              className="object-contain"
+            />
           </div>
-          <h1 className="h1-bold hidden text-primary lg:flex">
-            Hipnode
-            <span className="text-secondary1 dark:text-secondary2">.</span>
-          </h1>
+         
           <OutlineIcon.SearchIcon className="stroke-secondary5 dark:stroke-secondary4 md:hidden" />
         </section>
         <div className=" flex flex-row md:gap-[40px]">

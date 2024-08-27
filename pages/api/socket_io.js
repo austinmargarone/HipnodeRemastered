@@ -39,18 +39,66 @@ export default function SocketHandler(req, res) {
 
       try {
         const authResult = await thirdwebAuth.verifyJWT({ jwt });
-        if (!authResult.valid || !authResult.parsedJWT.userId) {
-          console.log("Invalid JWT or missing userId in socket connection");
+        if (!authResult.valid || !authResult.parsedJWT.sub) {
+          console.log("Invalid JWT or missing subject in socket connection");
+          socket.disconnect(true);
+          return;
+        }
+        let user = await UserModel.findOne({ address: authResult.parsedJWT.sub });
+        if (!user) {
+          console.log("User not found for address:", authResult.parsedJWT.sub);
+          // Instead of disconnecting, you might want to create a new user here
+          // user = await createNewUser(authResult.parsedJWT.sub);
+          // if (!user) {
+          //   console.log("Failed to create new user");
+          //   socket.disconnect(true);
+          //   return;
+          // }
           socket.disconnect(true);
           return;
         }
 
-        let user = await UserModel.findById(authResult.parsedJWT.userId);
-        if (!user) {
-          console.log("User not found for ID:", authResult.parsedJWT.userId);
-          socket.disconnect(true);
-          return;
+        const userId = user._id.toString();
+        console.log("User connected:", userId);
+
+        // Rest of your socket logic...
+
+      } catch (error) {
+        console.error("Error in socket connection:", error);
+        socket.disconnect(true);
+      }
+    });
+  }
+  res.end();
+}
+
+// You might want to add this function if you decide to create users in the socket connection
+async function createNewUser(address: string) {
+  const shortAddress = address.slice(0, 6);
+  const uniqueId = uuidv4().slice(0, 8);
+  const username = `user_${shortAddress}_${uniqueId}`;
+
+  try {
+    const user = await UserModel.findOneAndUpdate(
+      { address },
+      {
+        $setOnInsert: {
+          address,
+          username,
+          profileImage: '/user_images/profilePicture.png',
+          bannerImage: '/Profilebg.png',
         }
+      },
+      { upsert: true, new: true }
+    );
+    console.log("User created or found:", user);
+    return user;
+  } catch (error) {
+    console.error("Error in createNewUser:", error);
+    return null;
+  }
+}
+
 
         const userId = user._id.toString();
         const allNotif = await getAllNotification({ userId, type: "all" });

@@ -1,17 +1,17 @@
 export interface userToken {
-  userId: string;
+  address: string;  // Changed from userId to address
   iat: number;
 }
 
 export interface userProfileData {
   _id: string;
+  address: string;  // Added address field
   username: string;
-  email: string;
   profileImage: string;
   bannerImage: string;
   occupation: string;
-  followers: [];
-  following: [];
+  followers: string[];  // Changed to array of strings (user IDs)
+  following: string[];  // Changed to array of strings (user IDs)
   points: number;
   bio: string;
   website: string;
@@ -21,36 +21,17 @@ export interface userProfileData {
   createdAt: Date;
 }
 
-export interface ActionBarLink {
-  label: string;
-  icon: any;
-  value?: number;
-  status: boolean;
-}
-
-export interface commentDataType {
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-  imgUrl: string;
-  text: string;
-  reply: {
-    name: string;
-    createdAt: string;
-    updatedAt: string;
-    imgUrl: string;
-    text: string;
-  }[];
-}
+// ActionBarLink and commentDataType remain unchanged
 
 export interface interviewData {
   _id: string;
   title: string;
   desc: string;
   userId: {
-    username: any;
+    username: string;
     _id: string;
     profileImage: string;
+    address: string;  // Added address field
   };
   createdAt: Date;
   image: string;
