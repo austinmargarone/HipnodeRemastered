@@ -3,6 +3,7 @@ import { Schema } from "mongoose";
 
 export interface IUser {
   _id: Schema.Types.ObjectId;
+  address: string;
   username: string;
   email: string;
   password: string;
@@ -28,7 +29,7 @@ export interface IUser {
   reportedPosts: Schema.Types.ObjectId[];
   myPosts: Schema.Types.ObjectId[];
 
-  checkPassword: (password: string | Buffer) => Promise<boolean>;
+  checkPassword: (password: string) => boolean;
 }
 
 export interface UserData {

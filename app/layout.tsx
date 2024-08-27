@@ -1,6 +1,6 @@
 import React from "react";
 
-import NextAuthProvider from "../providers/NextAuthProvider";
+
 import { getServerSession } from "next-auth";
 
 import type { Metadata } from "next";
@@ -8,8 +8,13 @@ import type { Metadata } from "next";
 import { Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/providers/ThemeProvider";
-import { cn } from "@/utils";
 import { Toaster } from "@/components/ui/toaster";
+import dynamic from 'next/dynamic';
+
+const ThirdwebProviderWrapper = dynamic(
+  () => import('../components/ThirdwebProviderWrapper'),
+  { ssr: false }
+);
 
 const SourceSansPro = Source_Sans_3({ subsets: ["latin"] });
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
@@ -37,12 +42,14 @@ export default async function RootLayout({
 }) {
   const session = await getServerSession();
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={cn(SourceSansPro.className, "bg-bkg")}>
-        <NextAuthProvider session={session}>
-          <Providers>{children}</Providers>
-        </NextAuthProvider>
-        <Toaster />
+    <html lang="en">
+      <body>
+        <ThirdwebProviderWrapper>
+          
+            <Providers>{children}</Providers>
+       
+          <Toaster />
+        </ThirdwebProviderWrapper>
       </body>
     </html>
   );

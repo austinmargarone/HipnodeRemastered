@@ -1,13 +1,12 @@
 import mongoose, { Schema, Model } from "mongoose";
 import { IUser } from "@/types/mongoose";
-import bcrypt from "bcrypt";
 
 const userSchema: Schema = new Schema<IUser>(
   {
-    fullName: {
+    address: {
       type: String,
-      trim: true,
-      minlength: 3,
+      unique: true,
+      required: true,
     },
     username: {
       type: String,
@@ -15,21 +14,6 @@ const userSchema: Schema = new Schema<IUser>(
       required: true,
       trim: true,
       minlength: 3,
-    },
-    email: {
-      type: String,
-      unique: true,
-      trim: true,
-      required: true,
-    },
-    password: {
-      type: String,
-      trim: true,
-      minlength: 3,
-    },
-    occupation: {
-      type: String,
-      default: "",
     },
     profileImage: {
       type: String,
@@ -39,17 +23,9 @@ const userSchema: Schema = new Schema<IUser>(
       type: String,
       default: "/Profilebg.png",
     },
-    businessType: {
-      type: String,
-    },
-    businessStage: {
-      type: String,
-    },
-    codingLevel: {
-      type: String,
-    },
     bio: {
       type: String,
+      default: "",
     },
     website: {
       type: String,
@@ -85,7 +61,6 @@ const userSchema: Schema = new Schema<IUser>(
         ref: "Group",
       },
     ],
-
     points: {
       type: Number,
       default: 0,
@@ -93,19 +68,6 @@ const userSchema: Schema = new Schema<IUser>(
   },
   { timestamps: true }
 );
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (err: any) {
-    next(err);
-  }
-});
-userSchema.methods.checkPassword = async function (password: string | Buffer) {
-  return await bcrypt.compare(password, this.password);
-};
 
 const UserModel: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>("User", userSchema);

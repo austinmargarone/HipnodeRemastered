@@ -1,9 +1,37 @@
 "use server";
 import { getServerSession } from "next-auth";
+import { cookies } from "next/headers";
+import { createAuth } from "thirdweb/auth";
+import { createThirdwebClient } from "thirdweb";
+import { privateKeyToAccount } from "thirdweb/wallets";
+import UserModel from "@/models/User";
+import dbConnect from "@/utils/mongooseConnect";
+import { v4 as uuidv4 } from 'uuid'; 
+
+const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY || "";
+const clientId = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || "";
+const domain = process.env.NEXT_PUBLIC_THIRDWEB_AUTH_DOMAIN || "";
+
+if (!privateKey) {
+  throw new Error("Missing THIRDWEB_ADMIN_PRIVATE_KEY in .env file.");
+}
+
+if (!clientId) {
+  throw new Error("Missing NEXT_PUBLIC_THIRDWEB_CLIENT_ID in .env file.");
+}
+
+if (!domain) {
+  throw new Error("Missing NEXT_PUBLIC_THIRDWEB_AUTH_DOMAIN in .env file.");
+}
+
+const client = createThirdwebClient({ clientId });
+
+const thirdwebAuth = createAuth({
+  domain: domain,
+  adminAccount: privateKeyToAccount({ client, privateKey }),
+});
 
 import { ProfileSchema } from "@/components/profile/EditProfile";
-import dbConnect from "../mongooseConnect";
-import UserModel from "@/models/User";
 import { revalidatePath } from "next/cache";
 import Group, { IGroup } from "@/models/group.model";
 import { UserData } from "@/types/mongoose";
@@ -179,20 +207,57 @@ export async function followAuthor({
 export async function getCurrentUser(populate?: string[]) {
   try {
     await dbConnect();
-
-    // get the current user
-    const currentUser: any = await getServerSession();
-    const { email } = currentUser?.user;
-    const query = UserModel.findOne({ email });
-    for (const field of populate ?? []) {
-      query?.populate(field);
+    const jwt = cookies().get("jwt");
+    if (!jwt?.value) {
+      console.log("No JWT found");
+      return null;
     }
-    const User = await query;
-    // Return the user's id
-    return User ?? null;
+
+    const authResult = await thirdwebAuth.verifyJWT({ jwt: jwt.value });
+    if (!authResult.valid || !authResult.parsedJWT.sub) {
+      console.log("Invalid JWT or missing subject");
+      return null;
+    }
+
+    let user = await UserModel.findOne({ address: authResult.parsedJWT.sub });
+    if (!user) {
+      console.log("User not found in database");
+      return null;
+    }
+
+    if (populate) {
+      for (const field of populate) {
+        await user.populate(field);
+      }
+    }
+
+    return user;
   } catch (error) {
-    console.log(error);
+    console.error("Error in getCurrentUser:", error);
     return null;
+  }
+}
+
+async function createNewUser(address: string) {
+  const shortAddress = address.slice(0, 6);
+  const uniqueId = uuidv4().slice(0, 8);
+  const username = `user_${shortAddress}_${uniqueId}`;
+  const email = `${shortAddress}_${uniqueId}@example.com`;
+
+  try {
+    const user = await UserModel.create({
+      walletAddress: address,
+      username,
+      email,
+    });
+    console.log("New user created:", user);
+    return user;
+  } catch (error: any) {
+    if (error.code === 11000) {
+      console.log("Duplicate key error, retrying with a new UUID");
+      return createNewUser(address);
+    }
+    throw error;
   }
 }
 
@@ -253,16 +318,19 @@ export async function getAllPinnedGroups() {
     const user = await getCurrentUser(["pinnedGroups"]);
 
     if (!user) {
-      throw new Error("User not found");
+      console.log("User not found when getting pinned groups");
+      return [];
     }
-    if (!user.pinnedGroups) {
+
+    if (!user.pinnedGroups || user.pinnedGroups.length === 0) {
+      console.log("User has no pinned groups");
       return [];
     }
 
     return user.pinnedGroups as IGroup[];
   } catch (error) {
-    console.error("Error:", error);
-    throw new Error("Failed to get pinned groups");
+    console.error("Error getting pinned groups:", error);
+    return [];
   }
 }
 

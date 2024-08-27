@@ -12,23 +12,19 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = (await getCurrentUser()) as unknown as {
-    _id: string;
-    username: string;
-    profileImage: string;
-  };
+  const user = await getCurrentUser();
 
-  const userData = {
-    id: user?._id.toString(),
-    username: user?.username,
-    profileImage: user?.profileImage,
-  };
+  const userData = user ? {
+    id: user._id.toString(),
+    username: user.username,
+    profileImage: user.profileImage,
+  } : null;
 
   return (
     <>
       <SocketProvider>
         <PodcastProvider>
-          <Navbar user={userData} />
+          {userData && <Navbar user={userData} />}
           {children}
           <div className="sticky bottom-0 md:hidden">
             <Footer />

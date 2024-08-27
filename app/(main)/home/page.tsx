@@ -10,6 +10,8 @@ import { getPopularTags } from "@/utils/actions/post.action";
 import { getCurrentUser } from "@/utils/actions/user.action";
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { redirect } from 'next/navigation';  
+import { useRouter } from 'next/router';
 
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -36,8 +38,13 @@ export default async function Home({
   searchParams: { search: string };
 }) {
   const currentUser = await getCurrentUser();
-  const getPopTags = await getPopularTags();
+  if (!currentUser) {
+    console.log("User not found, redirecting to sign-in");
+    redirect('/sign-in');
+    return null;
+  }
 
+  const getPopTags = await getPopularTags();
   return (
     <main className="page-formatting">
       <section className="flex w-[350px] flex-col md:w-fit md:gap-5">

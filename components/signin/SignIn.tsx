@@ -1,142 +1,193 @@
 "use client";
-import React, { useState, ChangeEvent, FormEvent } from "react";
-import { signIn } from "next-auth/react";
+
+import React, { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ConnectEmbed, useActiveAccount } from "thirdweb/react";
+import { createThirdwebClient } from "thirdweb";
+import { baseSepolia } from "thirdweb/chains";
 
-import { Input } from "@/components/form/Input";
-import { Button } from "@/components/ui/Button";
-import { Divider } from "@mui/material";
-import FillIcon from "../icons/FillIcon";
+import { generatePayload, isLoggedIn, login, logout } from "../../actions/auth";
 
-interface FormData {
-  email: string;
-  password: string;
-}
+const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+
+export const config = {
+  matcher: [
+    "/home",
+    "/meetups",
+    "/groups",
+    "/podcasts",
+    "/interviews",
+    "/profile/:path*",
+    "/info",
+    "/",
+    "/sign-in",  // Add this to handle the sign-in page
+  ],
+};
 
 const SignIn: React.FC = () => {
   const router = useRouter();
-  const [formData, setFormData] = useState<FormData>({
-    email: "",
-    password: "",
-  });
-  const [failedLogin, setFailedLogin] = useState(false);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
-  };
-
-  const validateForm = (): boolean => {
-    return formData.email !== "" && formData.password !== "";
-  };
-
-  const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      setFailedLogin(true);
-      return;
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const account = useActiveAccount();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  const client = React.useMemo(() => {
+    if (!CLIENT_ID) {
+      console.error("NEXT_PUBLIC_THIRDWEB_CLIENT_ID is not set in the environment variables");
+      return null;
     }
+    return createThirdwebClient({ clientId: CLIENT_ID });
+  }, []);
 
+  const checkAuthStatus = useCallback(async () => {
+    const loggedIn = await isLoggedIn();
+    console.log("Is user logged in?", loggedIn);
+    setIsAuthenticated(loggedIn);
+    return loggedIn;
+  }, []);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log("User is authenticated, attempting to redirect to /home");
+      try {
+        router.push("/home");
+        console.log("Redirection to /home initiated");
+      } catch (error) {
+        console.error("Error during redirection:", error);
+      }
+    }
+  }, [isAuthenticated, router]);
+
+  const handleConnect = useCallback(async (wallet: any) => {
+    console.log("Wallet connected:", wallet);
     try {
-      const response = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
-
-      if (response?.error) {
-        setFailedLogin(true);
+      console.log("Checking auth status...");
+      const loggedIn = await checkAuthStatus();
+      console.log("Is user logged in?", loggedIn);
+      if (loggedIn) {
+        console.log("User is already logged in, redirecting to /home");
+        router.push("/home");
       } else {
-        router.push("/home"); // Redirect to the homepage after successful sign-in
+        console.log("User is not logged in, waiting for login...");
       }
     } catch (error) {
-      console.log("Sign in error:", error);
-      setFailedLogin(true);
+      console.error("Error in handleConnect:", error);
+      setLoginError("Failed to connect wallet. Please try again.");
     }
-  };
+  }, [checkAuthStatus, router]);
+
+  const handleLogin = useCallback(async (params: any) => {
+    console.log("Logging in with params:", JSON.stringify(params, null, 2));
+    try {
+      const result = await login(params);
+      console.log("Login result:", result);
+      if (result.success) {
+        console.log("Login successful, setting authenticated state");
+        setIsAuthenticated(true);
+        console.log("Attempting manual redirection to /home");
+        router.push("/home");
+      } else {
+        console.error("Login failed:", result.error);
+        setLoginError(result.error || "Login failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error during login:", error);
+      setLoginError("An error occurred during login. Please try again.");
+    }
+  }, [router]);
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const loggedIn = await isLoggedIn();
+      if (loggedIn) {
+        console.log("User is already logged in, redirecting to /home");
+        router.push("/home");
+      }
+    };
+    checkLoginStatus();
+  }, [router]);
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const loggedIn = await isLoggedIn();
+      if (loggedIn) {
+        console.log("User is already logged in, redirecting to /home");
+        router.push("/home");
+      }
+    };
+    checkLoginStatus();
+  }, [router]);
+
+  if (!client) {
+    return <p>Error: Unable to initialize Thirdweb client. Please check your environment variables.</p>;
+  }
 
   return (
-    <form
-      onSubmit={handleSignIn}
-      className="mx-auto flex w-[327px] flex-col gap-5 sm:w-[442px]"
-    >
-      <h1 className="h3-semibold text-secondary2 dark:text-background2">
-        Sign In
-      </h1>
+    <div className="flex min-h-screen flex-col md:flex-row">
+      <div className="flex flex-1 flex-col items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          <h2 className="mb-6 text-2xl font-semibold text-secondary2">
+            Connect Your Wallet
+          </h2>
 
-      {failedLogin && (
-        <p className="text-red">
-          Email or Password is incorrect. Please try again.
-        </p>
-      )}
+          {loginError && (
+            <p className="mb-4 text-red-500">{loginError}</p>
+          )}
 
-      <div>
-        <Input
-          name="email"
-          type="email"
-          divClassName="bg-background rounded-lg px-5 py-[13px] md:bg-background2 md:dark:bg-dark2 dark:bg-dark3"
-          className="w-full bg-transparent md:text-secondary2 md:placeholder:text-secondary2 md:dark:text-background2 "
-          value={formData.email}
-          onChange={handleChange}
-          placeholder="Email"
-          required
-        />
+          <ConnectEmbed
+            client={client}
+            onConnect={handleConnect}
+            auth={{
+              isLoggedIn: async (address) => {
+                console.log("Checking if logged in:", address);
+                return await isLoggedIn();
+              },
+              doLogin: handleLogin,
+              getLoginPayload: async ({ address }) => generatePayload({ address }),
+              doLogout: async () => {
+                console.log("Logging out");
+                await logout();
+                setLoginError(null);
+                setIsAuthenticated(false);
+              },
+            }}
+            chain={baseSepolia}
+            theme="dark"
+            privacyPolicyUrl="/privacy"
+            termsOfServiceUrl="/terms"
+            showAllWallets={true}
+            header={{
+              title: "Connect to Node Social",
+            }}
+          />
+
+          <p className="mt-6 text-sm text-secondary2">
+            By connecting your wallet, you agree to our{" "}
+            <Link href="/terms" className="text-red80 hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-red80 hover:underline">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+
+          {isAuthenticated && (
+            <button
+              onClick={() => router.push("/home")}
+              className="mt-4 w-full bg-blue-500 text-white py-2 px-4 rounded"
+            >
+              Go to Home
+            </button>
+          )}
+        </div>
       </div>
-
-      <div>
-        <Input
-          name="password"
-          type="password"
-          divClassName="bg-background rounded-lg px-5 py-[13px] md:bg-background2 md:dark:bg-dark2 dark:bg-dark3"
-          className="w-full bg-transparent md:text-secondary2 md:placeholder:text-secondary2 md:dark:text-background2 "
-          value={formData.password}
-          onChange={handleChange}
-          placeholder="Password"
-          required
-        />
-      </div>
-
-      <Button
-        type="submit"
-        className="flex h-[46px] w-[127px] items-center justify-center"
-      >
-        Sign In
-      </Button>
-
-      <p className="body-regular text-secondary2 dark:text-background2">
-        Don&apos;t have an account yet?{" "}
-        <Link href="/sign-up">
-          <span className="font-semibold text-red80">Join the community!</span>
-        </Link>
-      </p>
-
-      <div className="w-full">
-        <Divider />
-      </div>
-
-      <div className="flex w-full flex-col gap-5">
-        <Button
-          onClick={() => signIn("google", { callbackUrl: "/" })}
-          full
-          color="gray"
-          className="display-semibold items-center justify-center py-3 md:bg-secondary6"
-        >
-          <FillIcon.Google className="fill-secondary2 dark:fill-background2" />
-          <p>Sign In With Google</p>
-        </Button>
-        <Button
-          onClick={() => signIn("github", { callbackUrl: "/" })}
-          full
-          color="gray"
-          className="display-semibold items-center justify-center py-3 md:bg-secondary6"
-        >
-          <FillIcon.GitHub className="fill-secondary2 dark:fill-background2" />
-          <p>Sign In With GitHub</p>
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 };
 
