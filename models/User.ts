@@ -17,6 +17,10 @@ const userSchema: Schema = new Schema<IUser>(
       minlength: 3,
       unique: true,
     },
+    email: {
+      type: String,
+      sparse: true,
+    },
     profileImage: {
       type: String,
       default: "/user_images/profilePicture.png",
@@ -70,6 +74,8 @@ const userSchema: Schema = new Schema<IUser>(
   },
   { timestamps: true }
 );
+
+// Ensure indexes are set up correctly
 userSchema.index({ address: 1 }, { unique: true });
 userSchema.index({ username: 1 }, { unique: true });
 

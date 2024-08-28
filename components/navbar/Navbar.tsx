@@ -69,7 +69,7 @@ const Navbar = ({
   };
 
   return (
-    <article className="sticky top-0 z-10 flex h-[60px] justify-center bg-background px-[27px] py-3 shadow-lg dark:bg-dark3 md:h-[80px] md:px-[40px] md:py-[20px] lg:px-0">
+    <article className="sticky top-0 z-10 flex h-[60px] justify-center bg-dark3 backdrop-blur-sm px-[27px] py-3 shadow-lg dark:bg-dark3 md:h-[80px] md:px-[40px] md:py-[20px] lg:px-0">
       <div className="flex w-[335px] flex-row justify-between gap-2.5 md:w-[1130px] md:gap-0 lg:w-[1360px]">
         <section className="flex flex-row items-center justify-center gap-5 md:gap-2.5">
           <div className="flex left-30 items-center h-full">

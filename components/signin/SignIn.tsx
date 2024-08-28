@@ -8,27 +8,14 @@ import { createThirdwebClient } from "thirdweb";
 import { baseSepolia } from "thirdweb/chains";
 
 import { generatePayload, isLoggedIn, login, logout } from "../../actions/auth";
+import { Button } from "@/components/ui/Button";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
-
-export const config = {
-  matcher: [
-    "/home",
-    "/meetups",
-    "/groups",
-    "/podcasts",
-    "/interviews",
-    "/profile/:path*",
-    "/info",
-    "/",
-    "/sign-in",  // Add this to handle the sign-in page
-  ],
-};
 
 const SignIn: React.FC = () => {
   const router = useRouter();
   const [loginError, setLoginError] = useState<string | null>(null);
-  const account = useActiveAccount();
+  const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const client = React.useMemo(() => {
@@ -40,10 +27,15 @@ const SignIn: React.FC = () => {
   }, []);
 
   const checkAuthStatus = useCallback(async () => {
-    const loggedIn = await isLoggedIn();
-    console.log("Is user logged in?", loggedIn);
-    setIsAuthenticated(loggedIn);
-    return loggedIn;
+    try {
+      const loggedIn = await isLoggedIn();
+      console.log("Is user logged in?", loggedIn);
+      setIsAuthenticated(loggedIn);
+      return loggedIn;
+    } catch (error) {
+      console.error("Error checking auth status:", error);
+      return false;
+    }
   }, []);
 
   useEffect(() => {
@@ -52,22 +44,17 @@ const SignIn: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      console.log("User is authenticated, attempting to redirect to /home");
-      try {
-        router.push("/home");
-        console.log("Redirection to /home initiated");
-      } catch (error) {
-        console.error("Error during redirection:", error);
-      }
+      console.log("User is authenticated, redirecting to /home");
+      router.push("/home");
     }
   }, [isAuthenticated, router]);
 
   const handleConnect = useCallback(async (wallet: any) => {
     console.log("Wallet connected:", wallet);
+    setIsLoading(true);
+    setLoginError(null);
     try {
-      console.log("Checking auth status...");
       const loggedIn = await checkAuthStatus();
-      console.log("Is user logged in?", loggedIn);
       if (loggedIn) {
         console.log("User is already logged in, redirecting to /home");
         router.push("/home");
@@ -77,18 +64,21 @@ const SignIn: React.FC = () => {
     } catch (error) {
       console.error("Error in handleConnect:", error);
       setLoginError("Failed to connect wallet. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   }, [checkAuthStatus, router]);
 
   const handleLogin = useCallback(async (params: any) => {
     console.log("Logging in with params:", JSON.stringify(params, null, 2));
+    setIsLoading(true);
+    setLoginError(null);
     try {
       const result = await login(params);
       console.log("Login result:", result);
       if (result.success) {
         console.log("Login successful, setting authenticated state");
         setIsAuthenticated(true);
-        console.log("Attempting manual redirection to /home");
         router.push("/home");
       } else {
         console.error("Login failed:", result.error);
@@ -97,29 +87,9 @@ const SignIn: React.FC = () => {
     } catch (error) {
       console.error("Error during login:", error);
       setLoginError("An error occurred during login. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-  }, [router]);
-
-  useEffect(() => {
-    const checkLoginStatus = async () => {
-      const loggedIn = await isLoggedIn();
-      if (loggedIn) {
-        console.log("User is already logged in, redirecting to /home");
-        router.push("/home");
-      }
-    };
-    checkLoginStatus();
-  }, [router]);
-
-  useEffect(() => {
-    const checkLoginStatus = async () => {
-      const loggedIn = await isLoggedIn();
-      if (loggedIn) {
-        console.log("User is already logged in, redirecting to /home");
-        router.push("/home");
-      }
-    };
-    checkLoginStatus();
   }, [router]);
 
   if (!client) {
@@ -138,32 +108,36 @@ const SignIn: React.FC = () => {
             <p className="mb-4 text-red-500">{loginError}</p>
           )}
 
-          <ConnectEmbed
-            client={client}
-            onConnect={handleConnect}
-            auth={{
-              isLoggedIn: async (address) => {
-                console.log("Checking if logged in:", address);
-                return await isLoggedIn();
-              },
-              doLogin: handleLogin,
-              getLoginPayload: async ({ address }) => generatePayload({ address }),
-              doLogout: async () => {
-                console.log("Logging out");
-                await logout();
-                setLoginError(null);
-                setIsAuthenticated(false);
-              },
-            }}
-            chain={baseSepolia}
-            theme="dark"
-            privacyPolicyUrl="/privacy"
-            termsOfServiceUrl="/terms"
-            showAllWallets={true}
-            header={{
-              title: "Connect to Node Social",
-            }}
-          />
+          {isLoading ? (
+            <p>Loading...</p>
+          ) : (
+            <ConnectEmbed
+              client={client}
+              onConnect={handleConnect}
+              auth={{
+                isLoggedIn: async (address) => {
+                  console.log("Checking if logged in:", address);
+                  return await isLoggedIn();
+                },
+                doLogin: handleLogin,
+                getLoginPayload: async ({ address }) => generatePayload({ address }),
+                doLogout: async () => {
+                  console.log("Logging out");
+                  await logout();
+                  setLoginError(null);
+                  setIsAuthenticated(false);
+                },
+              }}
+              chain={baseSepolia}
+              theme="dark"
+              privacyPolicyUrl="/privacy"
+              termsOfServiceUrl="/terms"
+              showAllWallets={true}
+              header={{
+                title: "Connect to Node Social",
+              }}
+            />
+          )}
 
           <p className="mt-6 text-sm text-secondary2">
             By connecting your wallet, you agree to our{" "}
@@ -178,12 +152,12 @@ const SignIn: React.FC = () => {
           </p>
 
           {isAuthenticated && (
-            <button
+            <Button
               onClick={() => router.push("/home")}
-              className="mt-4 w-full bg-blue-500 text-white py-2 px-4 rounded"
+              className="mt-4 w-full"
             >
               Go to Home
-            </button>
+            </Button>
           )}
         </div>
       </div>

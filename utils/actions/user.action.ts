@@ -183,6 +183,7 @@ async function createNewUser(address: string) {
           username,
           profileImage: '/user_images/profilePicture.png',
           bannerImage: '/Profilebg.png',
+          pinnedGroups: [], // Initialize pinnedGroups as an empty array
         }
       },
       { upsert: true, new: true, runValidators: true }

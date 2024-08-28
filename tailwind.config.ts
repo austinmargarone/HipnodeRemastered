@@ -155,6 +155,9 @@ const config: Config = {
         md: "1100px",
         sm: "768px",
       },
+      backgroundImage: {
+        'custom-gradient': 'linear-gradient(to right, #4A148C, #1A237E)', // Deep purple to Dark blue
+      },
     },
   },
   plugins: [],

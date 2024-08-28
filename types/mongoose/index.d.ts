@@ -5,7 +5,7 @@ export interface IUser {
   _id: Schema.Types.ObjectId;
   address: string;
   username: string;
-  email: string;
+  email: string | null;
   password: string;
   profileImage: string;
   bannerImage: string;
@@ -36,7 +36,7 @@ export interface UserData {
   _id: Schema.Types.ObjectId;
   fullName: string;
   username: string;
-  email: string;
+  email: string | null;
   password: string;
   occupation: string;
   profileImage: string;

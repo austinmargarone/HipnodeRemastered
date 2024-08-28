@@ -1,6 +1,5 @@
 import React from "react";
 
-
 import { getServerSession } from "next-auth";
 
 import type { Metadata } from "next";
@@ -10,6 +9,11 @@ import "./globals.css";
 import { Providers } from "@/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
 import dynamic from 'next/dynamic';
+import { cn } from "@/lib/utils";
+
+
+// Add Spline import (note: we're not using '/next' here)
+const SplineScene = dynamic(() => import('@/components/SplineScene'), { ssr: false });
 
 const ThirdwebProviderWrapper = dynamic(
   () => import('../components/ThirdwebProviderWrapper'),
@@ -42,12 +46,11 @@ export default async function RootLayout({
 }) {
   const session = await getServerSession();
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <body className={cn(SourceSansPro.className, "bg-bkg relative")}>
+        <SplineScene />
         <ThirdwebProviderWrapper>
-          
-            <Providers>{children}</Providers>
-       
+          <Providers>{children}</Providers>
           <Toaster />
         </ThirdwebProviderWrapper>
       </body>

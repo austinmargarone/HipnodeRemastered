@@ -1,102 +1,65 @@
-/* eslint-disable camelcase */
-import NextAuth from "next-auth";
-import GitHubProvider from "next-auth/providers/github";
-import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
-
+import { NextRequest, NextResponse } from 'next/server';
+import { createAuth } from "thirdweb/auth";
+import { createThirdwebClient } from "thirdweb";
+import { privateKeyToAccount } from "thirdweb/wallets";
 import UserModel from "@/models/User";
 import dbConnect from "@/utils/mongooseConnect";
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  local: boolean;
-}
-interface Profile {
-  email: string;
-  fullName: string;
-  username: string;
-  [key: string]: any;
+const privateKey = process.env.THIRDWEB_ADMIN_PRIVATE_KEY || "";
+const clientId = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || "";
+const domain = process.env.NEXT_PUBLIC_THIRDWEB_AUTH_DOMAIN || "";
+
+if (!privateKey || !clientId || !domain) {
+  throw new Error("Missing environment variables");
 }
 
-const authOptions = {
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
+const client = createThirdwebClient({ clientId });
 
-      credentials: {
-        email: { label: "Email", type: "text" },
-        password: { label: "Password", type: "password" },
-      },
-      // @ts-ignore
-      async authorize(
-        credentials: Record<"email" | "password", string>,
-        req: any
-      ): Promise<User | null> {
-        try {
-          await dbConnect();
-          const { email, password } = credentials;
-          const user = await UserModel.findOne({ email });
-          if (!user) {
-            return null;
-          }
-          const isPasswordValid = await user.checkPassword(password);
-          if (!isPasswordValid) {
-            return null;
-          }
-          const userObj = {
-            id: user._id.toString(),
-            name: user.fullName,
-            email: user.email,
-            local: true,
-          };
-          return userObj;
-        } catch (error) {
-          console.log("Authentication error ", error);
-          return null;
-        }
-      },
-    }),
-    GitHubProvider({
-      clientId: process.env.GITHUB_ID!,
-      clientSecret: process.env.GITHUB_SECRET!,
-    }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-  ],
+const thirdwebAuth = createAuth({
+  domain: domain,
+  adminAccount: privateKeyToAccount({ client, privateKey }),
+});
 
-  callbacks: {
-    async signIn(profile: Profile) {
-      if (profile?.user.local) {
-        return true;
-      }
-      const { name, email, image } = profile.user;
-      const { given_name } = profile.profile;
+export async function POST(req: NextRequest) {
+  if (req.method !== 'POST') {
+    return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
+  }
 
-      try {
-        await dbConnect();
-        let user = await UserModel.findOne({ email });
+  try {
+    const body = await req.json();
+    const { payload } = body;
 
-        if (!user) {
-          user = await UserModel.create({
-            username: name,
-            fullName: given_name,
-            profileImage: image,
-            email,
-          });
-        }
-      } catch (e) {
-        console.error("Sign-in error:", e);
-      }
+    if (!payload) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
 
-      return true;
-    },
-  },
-};
+    const verifiedPayload = await thirdwebAuth.verifyPayload(payload);
 
-const handler = NextAuth(authOptions as any);
+    if (!verifiedPayload.valid) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 401 });
+    }
 
-export { handler as GET, handler as POST };
+    await dbConnect();
+    let user = await UserModel.findOne({ address: verifiedPayload.payload.address });
+
+    if (!user) {
+      user = await UserModel.create({
+        address: verifiedPayload.payload.address,
+        username: `user_${verifiedPayload.payload.address.slice(0, 6)}`,
+      });
+    }
+
+    const jwt = await thirdwebAuth.generateJWT({
+      payload: verifiedPayload.payload,
+    });
+
+    return NextResponse.json({ success: true, jwt }, { status: 200 });
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  return NextResponse.json({ message: 'Auth endpoint is working' }, { status: 200 });
+}

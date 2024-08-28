@@ -18,7 +18,7 @@ const baseURL = process.env.NEXT_PUBLIC_BASE_URL;
 export const metadata: Metadata = {
   title: "Hipnode",
   description:
-    "Explore the latest posts on Hipnode a social media forum for developers",
+    "Explore the latest posts on Node Social a social media platform for Web3 Enthusiasts",
   keywords: ["Hipnode", "posts", "community", "forum", "developers"],
   openGraph: {
     images: [
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
         url: `${baseURL}/home/Logo.png`,
         width: 1200,
         height: 630,
-        alt: "Hipnode",
+        alt: "Node Social",
       },
     ],
   },
