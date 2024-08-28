@@ -9,13 +9,18 @@ import { FilterQuery } from "mongoose";
 import { NewGroup, UpdateGroup } from "./shared.types";
 import { revalidatePath } from "next/cache";
 
+// Add this function to get the user's address
+async function getUserAddress() {
+  const session: any = await getServerSession();
+  return session?.user?.address;
+}
+
 export async function createGroup(params: NewGroup) {
   try {
     await dbConnect();
-    // get the current user
-    const currentUser: any = await getServerSession();
-    const { email } = currentUser?.user;
-    const User = await UserModel.findOne({ email });
+    const userAddress = await getUserAddress();
+    const User = await UserModel.findOne({ address: userAddress });
+    
     const { title, coverUrl, groupUrl, description, admins, members } = params;
     const parsedAdmins = JSON.parse(admins);
     const parseMembers = JSON.parse(members);
@@ -79,17 +84,16 @@ export async function getGroupById(groupId: string) {
 export async function joinGroup(groupId: string) {
   try {
     await dbConnect();
-    const user = await getServerSession();
-    const { email } = user?.user ?? { email: undefined };
-    const userObj = await UserModel.find({ email });
+    const userAddress = await getUserAddress();
+    const userObj = await UserModel.findOne({ address: userAddress });
     const group = await Group.findById(groupId);
 
     if (group) {
-      if (group.members.includes(userObj[0]._id)) {
+      if (group.members.includes(userObj?._id)) {
         return { success: false, message: "Member is already in the group." };
       }
 
-      group.members.push(userObj[0]._id);
+      group.members.push(userObj?._id);
       group.activity.push({
         date: new Date(),
         activityType: "new_member",
@@ -114,9 +118,8 @@ export async function joinGroup(groupId: string) {
 export async function isMember(groupId: string) {
   try {
     await dbConnect();
-    const user = await getServerSession();
-    const { email } = user?.user ?? { email: undefined };
-    const userObj = await UserModel.findOne({ email });
+    const userAddress = await getUserAddress();
+    const userObj = await UserModel.findOne({ address: userAddress });
     const group = await Group.findById(groupId);
 
     if (group) {
@@ -135,13 +138,12 @@ export async function isMember(groupId: string) {
 export async function leaveGroup(groupId: string) {
   try {
     await dbConnect();
-    const user = await getServerSession();
-    const { email } = user?.user ?? { email: undefined };
-    const userObj = await UserModel.find({ email });
+    const userAddress = await getUserAddress();
+    const userObj = await UserModel.findOne({ address: userAddress });
     const group = await Group.findById(groupId);
 
     if (group) {
-      const memberIndex = group.members.indexOf(userObj[0]._id);
+      const memberIndex = group.members.indexOf(userObj?._id);
       if (memberIndex === -1) {
         return { success: false, message: "Member is not in the group." };
       }
@@ -165,9 +167,8 @@ export async function leaveGroup(groupId: string) {
 
 export async function updateGroup(groupId: any, params: UpdateGroup) {
   const { title, coverUrl, groupUrl, description, admins, members } = params;
-  const currentUser: any = await getServerSession();
-  const { email } = currentUser?.user;
-  const User = await UserModel.findOne({ email });
+  const userAddress = await getUserAddress();
+  const User = await UserModel.findOne({ address: userAddress });
   const parsedAdmins = JSON.parse(admins);
   const parseMembers = JSON.parse(members);
 
