@@ -33,8 +33,8 @@ const InterviewHomePage = async ({
   ];
 
   const currentUser: any = await getServerSession();
-  const { email } = currentUser?.user;
-  const User = await UserModel.findOne({ email });
+  const address = currentUser?.user?.address;
+  const User = await UserModel.findOne({ address });
   const currentUserId = User?._id.toString();
 
   return (
