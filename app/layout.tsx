@@ -48,7 +48,6 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn(SourceSansPro.className, "bg-bkg relative")}>
-        <SplineScene />
         <ThirdwebProviderWrapper>
           <Providers>{children}</Providers>
           <Toaster />
