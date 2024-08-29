@@ -1,137 +1,123 @@
 "use client";
 
-import React, { useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import React, { useState, useRef } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { z } from "zod";
-import { Editor } from "@tinymce/tinymce-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Badge } from "../ui/badge";
-import { PostSchema } from "@/lib/validations";
 import { Input } from "../ui/input";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  Form,
-} from "../ui/form";
 import { Button } from "../ui/Button";
 import OutlineIcon from "../icons/OutlineIcon";
-import { useTheme } from "next-themes";
-import PostCategory from "../home/PostCategory";
 import { CldUploadWidget } from "next-cloudinary";
-import { createPost, updatePost } from "@/utils/actions/post.action";
 import GroupCategory from "../group/GroupCategory";
+import { Editor } from "@tinymce/tinymce-react";
 import { useOutsideClick } from "@/hooks/useOutsideClick";
 import { toast } from "../ui/use-toast";
+import { usePostContract } from "@/hooks/contracts/usePostContract";
+import { FormControl, FormItem, FormMessage } from "../ui/form";
+import { Form } from "../ui/form"; // Add this import
 
-export function InputPost({
-  editDetail,
-  title,
-}: {
-  editDetail?: string;
-  title?: string;
-}) {
-  const { theme } = useTheme();
+// Update PostSchema to include new fields
+const PostSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  contents: z.string().min(1, "Content is required"),
+  tags: z.array(z.string()),
+  groupId: z.string(),
+  isPremium: z.boolean(),
+  premiumPrice: z.number().min(0),
+  postType: z.enum(["regular", "poll", "challenge"]),
+  pollOptions: z.array(z.string()).optional(),
+  challengeDeadline: z.date().optional(),
+});
 
-  const editorRef = useRef(null);
+type PostFormData = z.infer<typeof PostSchema>;
+
+
+export function InputPost({ editDetail, title }: { editDetail?: string; title?: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
   const parsedDetail = editDetail && JSON.parse(editDetail || "");
   const groupedTags = parsedDetail?.tags.map((tag: any) => tag);
 
   const [coverUrl, setCoverUrl] = useState(parsedDetail?.image || "");
-  const router = useRouter();
-
   const [expanded, setExpanded] = useState(0);
   const [create, setCreate] = useState("Post");
+  const [theme, setTheme] = useState("light");
 
-  const toggleCategory = () => {
-    setExpanded(expanded !== 2 ? 2 : 0);
-  };
+  const { useCreatePost, useUpdatePost } = usePostContract();
+  const createPostMutation = useCreatePost;
+  const updatePostMutation = useUpdatePost;
+  const editorRef = useRef<any>(null);
 
-  const {
-    ref: groupRef,
-    isOpen: groupOpen,
-    toggleOpen: groupToggle,
-  } = useOutsideClick();
-
-  const closeCategory = (val: any) => {
-    setExpanded(0);
-    setCreate(val);
-  };
-
-  const updateForm = (url: string) => {
-    setCoverUrl(url);
-  };
-
-  // 1. Define your form.
-  const form = useForm<z.infer<typeof PostSchema>>({
+  const form = useForm<PostFormData>({
     resolver: zodResolver(PostSchema),
     defaultValues: {
       title: parsedDetail?.title || title || "",
       contents: parsedDetail?.content || "",
       tags: groupedTags || [],
       groupId: parsedDetail?.groupId || "",
+      isPremium: false,
+      premiumPrice: 0,
+      postType: "regular",
+      pollOptions: ["", ""],
+      challengeDeadline: undefined,
     },
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (values: PostFormData) => {
     setIsSubmitting(true);
     try {
-      const values = form.getValues();
       const postData = {
-        title: values.title,
-        content: values.contents,
-        tags: values.tags,
-        groupId: values.groupId,
+        ...values,
         image: coverUrl,
       };
+
       if (editDetail) {
-        await updatePost({
-          ...postData,
-          postId: parsedDetail?._id,
+        await updatePostMutation.mutateAsync({
+          params: [parsedDetail?._id, postData]
         });
       } else {
-        await createPost(postData);
+        await createPostMutation.mutateAsync({
+          params: [postData]
+        });
       }
-      return toast({
+
+      toast({
         title: `${editDetail ? "Edited" : "Created"} Post`,
         variant: "default",
       });
+      router.push("/");
     } catch (error) {
+      console.error("Error creating/updating post:", error);
+      if (error instanceof Error) {
+        toast({
+          title: "Error creating/updating post",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error creating/updating post",
+          description: "An unknown error occurred",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
-      router.push("/");
     }
   };
 
-  const handleInputKeydown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    field: any
-  ) => {
+  const handleInputKeydown = (e: React.KeyboardEvent<HTMLInputElement>, field: any) => {
     if (e.key === "Enter" && field.name === "tags") {
       e.preventDefault();
       const tagInput = e.target as HTMLInputElement;
       const tagValue = tagInput.value.trim();
-      if (tagValue !== "") {
-        if (tagValue.length > 15) {
-          return form.setError("tags", {
-            type: "required",
-            message: "Tag must be less than 15 characters.",
-          });
-        }
-        if (!field.value.includes(tagValue as never)) {
-          form.setValue("tags", [...field.value, tagValue]);
-          tagInput.value = "";
-          form.clearErrors("tags");
-        }
-      } else {
-        form.trigger();
+      if (tagValue !== "" && tagValue.length <= 15 && field.value.length < 5) {
+        form.setValue("tags", [...field.value, tagValue]);
+        tagInput.value = "";
       }
     }
   };
@@ -143,149 +129,61 @@ export function InputPost({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="rounded-2xl bg-background p-5 shadow-lg dark:bg-dark3"
-      >
-        <FormField
-          control={form.control}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="tabs tabs-boxed">
+          <a 
+            className={`tab ${form.watch("postType") === "regular" ? "tab-active" : ""}`}
+            onClick={() => form.setValue("postType", "regular")}
+          >
+            Regular Post
+          </a>
+          <a 
+            className={`tab ${form.watch("postType") === "poll" ? "tab-active" : ""}`}
+            onClick={() => form.setValue("postType", "poll")}
+          >
+            Poll
+          </a>
+          <a 
+            className={`tab ${form.watch("postType") === "challenge" ? "tab-active" : ""}`}
+            onClick={() => form.setValue("postType", "challenge")}
+          >
+            Challenge
+          </a>
+        </div>
+
+        <Controller
           name="title"
+          control={form.control}
           render={({ field }) => (
-            <FormItem className="mb-10">
-              <FormControl className="flex flex-col">
-                <div className="gap-5">
-                  <Input
-                    placeholder="Title..."
-                    className="h3-semibold md:h1-semibold border-none bg-background2 text-secondary2 placeholder:text-secondary3 dark:bg-dark4 dark:text-background2"
-                    {...field}
-                  />
-                  <FormMessage className="text-red90" />
-                  <div className="flex justify-between md:justify-start md:gap-5">
-                    <CldUploadWidget
-                      uploadPreset="ml_images"
-                      options={{ clientAllowedFormats: ["png", "jpg", "jpeg"] }}
-                      onUpload={(result: any) => {
-                        updateForm(result?.info?.secure_url);
-                      }}
-                    >
-                      {({ open }) => {
-                        function handleOnClick(e: React.MouseEvent) {
-                          e.preventDefault();
-                          open();
-                        }
-                        return (
-                          <div className="mb-[1.25rem]">
-                            <div className="flex">
-                              <Button
-                                color="blackWhite"
-                                type="button"
-                                onClick={handleOnClick}
-                                className="items-center justify-between px-[.7rem] py-2 text-secondary2 dark:text-background2"
-                              >
-                                <OutlineIcon.Image1 />
-                                <p className="text-xs-regular md:text-xs-semibold text-secondary2 dark:text-background2">
-                                  Set Cover
-                                </p>
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      }}
-                    </CldUploadWidget>
-                    <div className="relative" ref={groupRef}>
-                      <Button
-                        color="blackWhite"
-                        className="items-center justify-between p-[.7rem] text-secondary2 dark:text-background2"
-                        type="button"
-                        onClick={groupToggle}
-                      >
-                        <p className="text-xs-regular md:text-xs-semibold text-secondary2 dark:text-background2">
-                          Select Group
-                        </p>
-                        <OutlineIcon.DownArrow className="h-3 w-3 fill-secondary6 dark:fill-secondary3" />
-                      </Button>
-                      {groupOpen && (
-                        <div className="absolute left-0 z-50 mt-2">
-                          <GroupCategory form={form} />
-                        </div>
-                      )}
-                      <div className="text-sm font-medium text-red90">
-                        {form.formState.errors.groupId && "Must choose a group"}
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <Button
-                        color="blackWhite"
-                        className="items-center justify-between p-[.7rem]"
-                        type="button"
-                        onClick={toggleCategory}
-                      >
-                        <p className="text-xs-regular md:text-xs-semibold text-secondary2 dark:text-background2">
-                          <span className="text-secondary3">Create</span> -{" "}
-                          {create}
-                        </p>
-                        <OutlineIcon.DownArrow className="h-3 w-3 fill-secondary6 dark:fill-secondary3" />
-                      </Button>
-                      {expanded === 2 && (
-                        <div className="absolute left-0 z-50 mt-2">
-                          <PostCategory closeCategory={closeCategory} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </FormControl>
-            </FormItem>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Title</span>
+              </label>
+              <input type="text" placeholder="Enter your post title" className="input input-bordered" {...field} />
+            </div>
           )}
         />
 
-        <FormField
-          control={form.control}
+        <Controller
           name="contents"
+          control={form.control}
           render={({ field }) => (
             <FormItem>
-              <div className="flex">
-                <Link
-                  href="/info/code-of-conduct"
-                  className="body-semibold md:display-semibold px-3.5 text-secondary2 dark:text-background2 md:hidden"
-                >
-                  Code of Conduct
-                </Link>
-              </div>
               <FormControl>
                 <Editor
                   onEditorChange={(content) => field.onChange(content)}
                   apiKey={process.env.NEXT_PUBLIC_TINY_EDITOR_API_KEY}
-                  onInit={(evt, editor) =>
-                    // @ts-ignore
-                    (editorRef.current = editor)
-                  }
+                  onInit={(evt, editor) => editorRef.current = editor}
                   key={theme}
                   initialValue={parsedDetail?.content || `Tell your story...`}
                   init={{
                     height: 376,
                     menubar: false,
                     plugins: [
-                      "advlist",
-                      "autolink",
-                      "lists",
-                      "link",
-                      "image",
-                      "charmap",
-                      "print",
-                      "preview",
-                      "anchor",
-                      "searchreplace",
-                      "visualblocks",
-                      "code",
-                      "fullscreen",
-                      "insertdatetime",
-                      "media",
-                      "table",
-                      "paste",
-                      "code",
-                      "help",
-                      "wordcount",
+                      "advlist", "autolink", "lists", "link", "image", "charmap", "print",
+                      "preview", "anchor", "searchreplace", "visualblocks", "code",
+                      "fullscreen", "insertdatetime", "media", "table", "paste", "code",
+                      "help", "wordcount",
                     ],
                     toolbar_mode: "floating",
                     skin: theme === "dark" ? "oxide-dark" : "oxide",
@@ -323,62 +221,156 @@ export function InputPost({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="tags"
-          render={({ field }) => (
-            <FormItem className="my-5">
-              <FormLabel className="caption-semibold md:body-semibold text-secondary2 dark:text-background2">
-                Add or change tags (up to 5) so readers know what your story is
-                about
-              </FormLabel>
-              <FormControl>
-                <>
-                  <Input
-                    placeholder="Add a tag..."
-                    className="caption-regular md:body-regular border-none bg-background2 text-secondary2 placeholder:text-secondary3 dark:bg-dark4 dark:text-background2"
-                    onKeyDown={(e) => handleInputKeydown(e, field)}
+        {form.watch("postType") === "poll" && (
+          <Controller
+            name="pollOptions"
+            control={form.control}
+            render={({ field }) => (
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Poll Options</span>
+                </label>
+                {field.value?.map((option, index) => (
+                  <input
+                    key={index}
+                    type="text"
+                    placeholder={`Option ${index + 1}`}
+                    className="input input-bordered mt-2"
+                    value={option}
+                    onChange={(e) => {
+                      const newOptions = [...field.value!];
+                      newOptions[index] = e.target.value;
+                      field.onChange(newOptions);
+                    }}
                   />
-                  {Array.isArray(field.value) && field.value.length > 0 && (
-                    <div className="mt-2.5 flex items-start gap-2.5">
-                      {field.value.map((tag: any) => (
-                        <Badge
-                          key={tag}
-                          className="flex items-center justify-center gap-2 rounded-md border-none bg-background px-4 py-2 capitalize text-secondary2 hover:bg-background/80 dark:bg-dark4 dark:text-background2 hover:dark:bg-dark4/80"
-                          onClick={() => handleTagRemove(tag, field)}
-                        >
-                          {tag}
-                          <OutlineIcon.Close className="cursor-pointer object-contain invert-0 dark:invert" />
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </>
-              </FormControl>
-              <FormMessage className="text-red90" />
-            </FormItem>
+                ))}
+                <button
+                  type="button"
+                  className="btn btn-secondary mt-2"
+                  onClick={() => field.onChange([...field.value!, ""])}
+                >
+                  Add Option
+                </button>
+              </div>
+            )}
+          />
+        )}
+
+        {form.watch("postType") === "challenge" && (
+          <Controller
+            name="challengeDeadline"
+            control={form.control}
+            render={({ field }) => (
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Challenge Deadline</span>
+                </label>
+                <input
+                  type="date"
+                  className="input input-bordered"
+                  {...field}
+                  value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                  onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                />
+              </div>
+            )}
+          />
+        )}
+
+        <Controller
+          name="tags"
+          control={form.control}
+          render={({ field }) => (
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Tags</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Add a tag and press Enter (max 5 tags)"
+                className="input input-bordered"
+                onKeyDown={(e) => handleInputKeydown(e, field)}
+              />
+              <div className="flex flex-wrap gap-2 mt-2">
+                {field.value.map((tag) => (
+                  <div key={tag} className="badge badge-secondary gap-2">
+                    {tag}
+                    <button type="button" onClick={() => handleTagRemove(tag, field)}>✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         />
 
-        <div className="flex justify-start gap-5">
-          <Button
-            type="submit"
-            color="blue"
-            className="md:display-semibold body-semibold px-10 py-2.5"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? <>Posting...</> : <>Publish</>}
-          </Button>
+        <Controller
+          name="isPremium"
+          control={form.control}
+          render={({ field }) => (
+            <div className="form-control">
+              <label className="label cursor-pointer">
+                <span className="label-text">Premium Post</span>
+                <input type="checkbox" className="toggle toggle-primary" checked={field.value} onChange={field.onChange} />
+              </label>
+            </div>
+          )}
+        />
 
-          <Button
-            type="button"
-            color="gray"
-            className="md:display-semibold body-semibold px-10 py-2.5"
-            onClick={() => router.push("/")}
-          >
-            <p className="text-secondary3">Cancel</p>
-          </Button>
-        </div>
+        {form.watch("isPremium") && (
+          <Controller
+            name="premiumPrice"
+            control={form.control}
+            render={({ field }) => (
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Premium Price (in ETH)</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="input input-bordered"
+                  {...field}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                />
+              </div>
+            )}
+          />
+        )}
+
+        <CldUploadWidget
+          uploadPreset="ml_default"
+          onUpload={(result: any) => {
+            setCoverUrl(result.info.secure_url);
+          }}
+        >
+          {({ open }) => {
+            function handleOnClick(e: React.MouseEvent) {
+              e.preventDefault();
+              open();
+            }
+            return (
+              <button className="btn btn-outline" onClick={handleOnClick}>
+                Upload Cover Image
+              </button>
+            );
+          }}
+        </CldUploadWidget>
+
+        {coverUrl && (
+          <div className="mt-4">
+            <img src={coverUrl} alt="Cover" className="max-h-60 rounded object-cover" />
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className={`btn btn-primary w-full ${isSubmitting || createPostMutation.isPending || updatePostMutation.isPending ? "loading" : ""}`}
+          disabled={isSubmitting || createPostMutation.isPending || updatePostMutation.isPending}
+        >
+          {isSubmitting || createPostMutation.isPending || updatePostMutation.isPending
+            ? "Submitting..."
+            : editDetail ? "Update Post" : "Create Post"}
+        </button>
       </form>
     </Form>
   );

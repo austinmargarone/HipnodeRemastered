@@ -1,15 +1,41 @@
 "use client";
+
 import { ImageFallback as Image } from "@/components/shared/ImageFallback";
 import { Input } from "../form/Input";
 import React, { useState } from "react";
 import { Button } from "../ui/Button";
+import { usePostContract } from "@/hooks/contracts/usePostContract";
+import { toast } from "../ui/use-toast";
 import Link from "next/link";
 
 const CreatePost = ({ avatar }: { avatar: string }) => {
   const [inputValue, setInputValue] = useState("");
+  const { useCreatePost } = usePostContract();
+  const createPostMutation = useCreatePost;
 
   const handleInputChange = (e: any) => {
     setInputValue(e.target.value);
+  };
+
+  const handleCreatePost = async () => {
+    if (!inputValue.trim()) return;
+
+    try {
+      await createPostMutation.mutateAsync({
+        params: [inputValue, false, 0, []] // [content, isPremium, premiumPrice, tags]
+      });
+      toast({
+        title: "Post created successfully!",
+        variant: "default",
+      });
+      setInputValue("");
+    } catch (error) {
+      console.error("Error creating post:", error);
+      toast({
+        title: "Error creating post",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -34,12 +60,12 @@ const CreatePost = ({ avatar }: { avatar: string }) => {
         </div>
         <div className="w-[150px]">
           <Link href={`/posts/new?title=${inputValue}`}>
-            <Button
-              color="orange"
-              className="caption-semibold md:body-semibold gap-2.5 rounded-[6px] px-3 py-2 text-center md:px-4 md:py-3"
-            >
+          <Button
+            color="orange"
+            className="caption-semibold md:body-semibold gap-2.5 rounded-[6px] px-3 py-2 text-center md:px-4 md:py-3"
+          >
               Create Post
-            </Button>
+          </Button>
           </Link>
         </div>
       </div>
